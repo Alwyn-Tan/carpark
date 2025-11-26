@@ -7,10 +7,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -20,13 +22,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import hk.edu.cuhk.iems5722.carpark.model.CarParkBasicInfo
+import hk.edu.cuhk.iems5722.carpark.model.carparkPhotoHttps
 
 @Composable
 fun CarParkListScreen(
@@ -125,7 +132,7 @@ private fun CarParkCardContent(
     onVacancyClicked: () -> Unit
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
-    
+
     Row(
         modifier = Modifier
             .padding(12.dp)
@@ -135,11 +142,30 @@ private fun CarParkCardContent(
                     stiffness = Spring.StiffnessLow
                 )
             )
+        // 如需点击展开，取消注释：
+        // .clickable { expanded = !expanded }
     ) {
+        // 统一使用 https 链接
+        val secureUrl = remember(carPark.carparkPhoto) { carPark.carparkPhotoHttps }
+
+        AsyncImage(
+            model = secureUrl, // 简化：直接传 URL 即可
+            contentDescription = "Photo of ${carPark.nameEn}",
+            modifier = Modifier
+                .width(120.dp)
+                .height(90.dp)
+                .clip(RoundedCornerShape(8.dp)),
+            contentScale = ContentScale.Crop
+            // 可选：占位与错误资源（需要你有相应的 drawable）
+            // placeholder = painterResource(R.drawable.placeholder),
+            // error = painterResource(R.drawable.image_error),
+        )
+
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(12.dp)
+                // 由于 carparkPhoto 为非空，这里直接固定左边距更合理
+                .padding(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 12.dp)
         ) {
             Text(
                 text = carPark.nameEn,
@@ -147,6 +173,9 @@ private fun CarParkCardContent(
                     fontWeight = FontWeight.ExtraBold
                 )
             )
+            // 如果只是调试用，建议删除这行
+            // Text(text = secureUrl, style = MaterialTheme.typography.bodySmall)
+
             if (expanded) {
                 Text(text = "ID: ${carPark.parkId}")
                 Text(text = "Name: ${carPark.nameEn}")
@@ -162,6 +191,7 @@ private fun CarParkCardContent(
                 }
             }
         }
+
         Button(
             onClick = onVacancyClicked,
             colors = ButtonDefaults.buttonColors(
@@ -172,4 +202,3 @@ private fun CarParkCardContent(
         }
     }
 }
-

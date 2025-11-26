@@ -1,17 +1,24 @@
 package hk.edu.cuhk.iems5722.carpark.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import coil.compose.rememberAsyncImagePainter
 import hk.edu.cuhk.iems5722.carpark.model.CarParkBasicInfo
 import hk.edu.cuhk.iems5722.carpark.model.CarParkVacancy
 
@@ -70,6 +77,20 @@ fun VacancyDetailScreen(
             .padding(16.dp)
     ) {
         carPark?.let {
+            // 停车场图片
+            it.carparkPhoto?.let { photoUrl ->
+                Image(
+                    painter = rememberAsyncImagePainter(photoUrl),
+                    contentDescription = "Car park photo",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .padding(bottom = 16.dp),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            
             Text(
                 text = it.nameEn,
                 style = MaterialTheme.typography.headlineMedium.copy(
