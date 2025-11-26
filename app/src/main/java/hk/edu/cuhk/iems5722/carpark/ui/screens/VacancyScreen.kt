@@ -73,7 +73,6 @@ fun VacancyDetailScreen(
 ) {
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         carPark?.let { info ->
-            // 停车场图片（统一使用 HTTPS 链接）
             AsyncImage(
                     model = info.carparkPhotoHttps,
                     contentDescription = "Car park photo",
@@ -115,29 +114,27 @@ fun VacancyDetailScreen(
             }
         }
 
-        val vacancyCount = vacancy.getFirstValidVacancy()
+        val vacancyDisplayText = vacancy.getVacancyDisplayText()
+        val isErrorState = vacancy.isClosedOrNoData()
+        val isFull = vacancy.isFull()
 
         Text(
-                text =
-                        if (vacancyCount >= 0) {
-                            "Current Vacancy: $vacancyCount"
-                        } else {
-                            "Vacancy: Data unavailable"
-                        },
+                text = "Vacancy Status: $vacancyDisplayText",
                 style =
                         MaterialTheme.typography.headlineLarge.copy(
                                 color =
-                                        if (vacancyCount >= 0) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.error
+                                        when {
+                                            isErrorState -> MaterialTheme.colorScheme.error
+                                            isFull -> MaterialTheme.colorScheme.error
+                                            else -> MaterialTheme.colorScheme.primary
                                         }
                         ),
                 modifier = Modifier.padding(vertical = 16.dp)
         )
 
-        if (vacancy.hasValidData()) {
-            vacancy.getLastUpdateTime()?.let { lastUpdate ->
+        val serviceCategory = vacancy.getFirstServiceCategory()
+        if (serviceCategory != null && !vacancy.isClosedOrNoData()) {
+            serviceCategory.lastUpdate?.let { lastUpdate ->
                 Text(
                         text = "Last Update: $lastUpdate",
                         style = MaterialTheme.typography.bodyMedium,
@@ -146,14 +143,12 @@ fun VacancyDetailScreen(
             }
         }
 
-        // 按钮行：Google Maps 和 Back
         Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             val context = LocalContext.current
 
-            // Google Maps 按钮
             carPark?.let { info ->
                 Button(
                         onClick = { openGoogleMaps(context, info.displayAddressEn) },
@@ -161,7 +156,6 @@ fun VacancyDetailScreen(
                 ) { Text("Open in Google Maps") }
             }
 
-            // Back 按钮
             Button(onClick = onBackClicked, modifier = Modifier.weight(1f)) { Text("Back") }
         }
     }
@@ -206,10 +200,8 @@ fun VacancyNotFoundScreen(onBackClicked: () -> Unit, modifier: Modifier = Modifi
     }
 }
 
-/** 打开 Google Maps 并搜索指定地址 */
 private fun openGoogleMaps(context: Context, address: String) {
     try {
-        // 构建 Google Maps URL
         val encodedAddress = Uri.encode(address)
         val googleMapsUri =
                 Uri.parse("https://www.google.com/maps/search/?api=1&query=$encodedAddress")
@@ -217,16 +209,13 @@ private fun openGoogleMaps(context: Context, address: String) {
         val intent = Intent(Intent.ACTION_VIEW, googleMapsUri)
         intent.setPackage("com.google.android.apps.maps")
 
-        // 如果 Google Maps 应用未安装，则使用浏览器打开
         if (intent.resolveActivity(context.packageManager) != null) {
             context.startActivity(intent)
         } else {
-            // 回退到浏览器
             val browserIntent = Intent(Intent.ACTION_VIEW, googleMapsUri)
             context.startActivity(browserIntent)
         }
     } catch (e: Exception) {
-        // 处理异常，如果无法打开地图
         e.printStackTrace()
     }
 }
