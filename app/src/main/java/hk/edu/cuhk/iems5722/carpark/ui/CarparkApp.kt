@@ -18,18 +18,18 @@ object Routes {
     const val ON_BOARDING = "onboarding"
     const val HOME = "home"
     const val VACANCY = "vacancy/{parkId}"
-    
+
     fun vacancy(parkId: String) = "vacancy/$parkId"
 }
 
 @Composable
 fun CarparkApp(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
-    
+
     val carParkViewModel: CarParkViewModel = viewModel(
         factory = CarParkViewModel.Factory
     )
-    
+
     Surface(modifier) {
         NavHost(
             navController = navController,
@@ -46,7 +46,7 @@ fun CarparkApp(modifier: Modifier = Modifier) {
                     modifier = Modifier.fillMaxSize()
                 )
             }
-            
+
             composable(Routes.HOME) {
                 CarParkListScreen(
                     carParkListUiState = carParkViewModel.carParkListUiState,
@@ -59,17 +59,18 @@ fun CarparkApp(modifier: Modifier = Modifier) {
                     }
                 )
             }
-            
+
             composable(Routes.VACANCY) { backStackEntry ->
                 val parkId = backStackEntry.arguments?.getString("parkId")
-                
+
                 val carPark = when (val state = carParkViewModel.carParkListUiState) {
                     is CarParkListUiState.Success -> {
                         state.carParks.find { it.parkId == parkId }
                     }
+
                     else -> null
                 }
-                
+
                 VacancyScreen(
                     carPark = carPark,
                     vacancyUiState = carParkViewModel.vacancyUiState,

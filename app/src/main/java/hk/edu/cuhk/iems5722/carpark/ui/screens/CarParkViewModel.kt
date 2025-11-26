@@ -33,17 +33,17 @@ sealed interface VacancyUiState {
 class CarParkViewModel(
     private val carParkRepository: CarParkRepository
 ) : ViewModel() {
-    
+
     var carParkListUiState: CarParkListUiState by mutableStateOf(CarParkListUiState.Loading)
         private set
-    
+
     var vacancyUiState: VacancyUiState by mutableStateOf(VacancyUiState.Loading)
         private set
-    
+
     init {
         getCarParks()
     }
-    
+
     fun getCarParks() {
         viewModelScope.launch {
             carParkListUiState = CarParkListUiState.Loading
@@ -59,7 +59,7 @@ class CarParkViewModel(
             }
         }
     }
-    
+
     fun getVacancy(parkId: String) {
         viewModelScope.launch {
             vacancyUiState = VacancyUiState.Loading
@@ -79,7 +79,7 @@ class CarParkViewModel(
             }
         }
     }
-    
+
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {

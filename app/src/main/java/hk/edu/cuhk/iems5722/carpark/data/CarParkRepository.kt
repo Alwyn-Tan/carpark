@@ -11,7 +11,7 @@ interface CarParkRepository {
 }
 
 class NetworkCarParkRepository(private val carParkApiService: CarParkApiService) :
-        CarParkRepository {
+    CarParkRepository {
 
     override suspend fun getCarParks(): List<CarParkBasicInfo> {
         val response = carParkApiService.getCarParksBasicInfo()

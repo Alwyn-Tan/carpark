@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -44,15 +45,15 @@ fun CarParkListScreen(
 ) {
     when (carParkListUiState) {
         is CarParkListUiState.Loading -> LoadingScreen(modifier = modifier.fillMaxSize())
-        is CarParkListUiState.Success -> CarParkList(
-            carParks = carParkListUiState.carParks,
-            onVacancyClicked = onVacancyClicked,
-            modifier = modifier
-        )
-        is CarParkListUiState.Error -> ErrorScreen(
-            onRetryClicked = onRetryClicked,
-            modifier = modifier.fillMaxSize()
-        )
+        is CarParkListUiState.Success ->
+            CarParkList(
+                carParks = carParkListUiState.carParks,
+                onVacancyClicked = onVacancyClicked,
+                modifier = modifier
+            )
+
+        is CarParkListUiState.Error ->
+            ErrorScreen(onRetryClicked = onRetryClicked, modifier = modifier.fillMaxSize())
     }
 }
 
@@ -62,19 +63,11 @@ fun LoadingScreen(modifier: Modifier = Modifier) {
         modifier = modifier,
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Loading car parks...",
-            style = MaterialTheme.typography.headlineMedium
-        )
-    }
+    ) { Text(text = "Loading car parks...", style = MaterialTheme.typography.headlineMedium) }
 }
 
 @Composable
-fun ErrorScreen(
-    onRetryClicked: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun ErrorScreen(onRetryClicked: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.Center,
@@ -85,9 +78,7 @@ fun ErrorScreen(
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(16.dp)
         )
-        Button(onClick = onRetryClicked) {
-            Text("Retry")
-        }
+        Button(onClick = onRetryClicked) { Text("Retry") }
     }
 }
 
@@ -99,10 +90,7 @@ fun CarParkList(
 ) {
     LazyColumn(modifier = modifier.padding(vertical = 4.dp)) {
         items(items = carParks, key = { it.parkId }) { carPark ->
-            CarParkCard(
-                carPark = carPark,
-                onVacancyClicked = { onVacancyClicked(carPark.parkId) }
-            )
+            CarParkCard(carPark = carPark, onVacancyClicked = { onVacancyClicked(carPark.parkId) })
         }
     }
 }
@@ -114,91 +102,77 @@ fun CarParkCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primary
-        ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
         modifier = modifier.padding(vertical = 4.dp, horizontal = 8.dp)
-    ) {
-        CarParkCardContent(
-            carPark = carPark,
-            onVacancyClicked = onVacancyClicked
-        )
-    }
+    ) { CarParkCardContent(carPark = carPark, onVacancyClicked = onVacancyClicked) }
 }
 
 @Composable
-private fun CarParkCardContent(
-    carPark: CarParkBasicInfo,
-    onVacancyClicked: () -> Unit
-) {
+private fun CarParkCardContent(carPark: CarParkBasicInfo, onVacancyClicked: () -> Unit) {
     var expanded by rememberSaveable { mutableStateOf(false) }
 
     Row(
-        modifier = Modifier
-            .padding(12.dp)
-            .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessLow
-                )
-            )
-        // 如需点击展开，取消注释：
-        // .clickable { expanded = !expanded }
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+                .animateContentSize(
+                    animationSpec =
+                        spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                ),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // 统一使用 https 链接
-        val secureUrl = remember(carPark.carparkPhoto) { carPark.carparkPhotoHttps }
+        val photoUrl = remember(carPark.carparkPhoto) { carPark.carparkPhotoHttps }
 
         AsyncImage(
-            model = secureUrl, // 简化：直接传 URL 即可
+            model = photoUrl,
             contentDescription = "Photo of ${carPark.nameEn}",
             modifier = Modifier
-                .width(120.dp)
-                .height(90.dp)
+                .width(100.dp)
+                .height(75.dp)
                 .clip(RoundedCornerShape(8.dp)),
-            contentScale = ContentScale.Crop
-            // 可选：占位与错误资源（需要你有相应的 drawable）
-            // placeholder = painterResource(R.drawable.placeholder),
-            // error = painterResource(R.drawable.image_error),
+            contentScale = ContentScale.Crop,
         )
 
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                // 由于 carparkPhoto 为非空，这里直接固定左边距更合理
-                .padding(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 12.dp)
-        ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 text = carPark.nameEn,
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.ExtraBold
-                )
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                maxLines = 2,
+                modifier = Modifier.padding(end = 8.dp)
             )
-            // 如果只是调试用，建议删除这行
-            // Text(text = secureUrl, style = MaterialTheme.typography.bodySmall)
 
             if (expanded) {
-                Text(text = "ID: ${carPark.parkId}")
-                Text(text = "Name: ${carPark.nameEn}")
-                Text(text = "Address: ${carPark.displayAddressEn}")
+                Text(text = "ID: ${carPark.parkId}", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = carPark.displayAddressEn,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2
+                )
                 carPark.districtEn?.let {
-                    Text(text = "District: $it")
+                    Text(text = "District: $it", style = MaterialTheme.typography.bodySmall)
                 }
                 carPark.contactNo?.takeIf { it.isNotEmpty() }?.let {
-                    Text(text = "Contact: $it")
+                    Text(text = "Contact: $it", style = MaterialTheme.typography.bodySmall)
                 }
                 carPark.height?.takeIf { it > 0 }?.let {
-                    Text(text = "Height Limit: ${it}m")
+                    Text(text = "Height Limit: ${it}m", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
 
         Button(
             onClick = onVacancyClicked,
-            colors = ButtonDefaults.buttonColors(
-                androidx.compose.ui.graphics.Color(0xFF1974C2)
-            )
-        ) {
-            Text("Vacancy")
-        }
+            colors =
+                ButtonDefaults.buttonColors(androidx.compose.ui.graphics.Color(0xFF1974C2)),
+            modifier = Modifier.align(Alignment.CenterVertically)
+        ) { Text("Vacancy", style = MaterialTheme.typography.labelMedium) }
     }
 }
