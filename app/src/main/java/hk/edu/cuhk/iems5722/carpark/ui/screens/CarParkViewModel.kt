@@ -13,6 +13,7 @@ import hk.edu.cuhk.iems5722.carpark.CarparkApplication
 import hk.edu.cuhk.iems5722.carpark.data.CarParkRepository
 import hk.edu.cuhk.iems5722.carpark.model.CarParkBasicInfo
 import hk.edu.cuhk.iems5722.carpark.model.CarParkVacancy
+import hk.edu.cuhk.iems5722.carpark.model.calculateDistance
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
@@ -78,6 +79,25 @@ class CarParkViewModel(
                 VacancyUiState.Error
             }
         }
+    }
+
+    fun findNearestCarPark(latitude: Double, longitude: Double): CarParkBasicInfo? {
+        val state = carParkListUiState
+        if (state !is CarParkListUiState.Success) {
+            return null
+        }
+
+        return state.carParks
+            .mapNotNull { carPark ->
+                val distance = carPark.calculateDistance(latitude, longitude)
+                if (distance != null) {
+                    Pair(carPark, distance)
+                } else {
+                    null
+                }
+            }
+            .minByOrNull { it.second }
+            ?.first
     }
 
     companion object {

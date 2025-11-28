@@ -1,11 +1,19 @@
 package hk.edu.cuhk.iems5722.carpark.ui.screens
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,53 +38,56 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import hk.edu.cuhk.iems5722.carpark.model.CarParkBasicInfo
 import hk.edu.cuhk.iems5722.carpark.model.carparkPhotoHttps
 
 @Composable
 fun CarParkListScreen(
-    carParkListUiState: CarParkListUiState,
-    onVacancyClicked: (String) -> Unit,
-    onRetryClicked: () -> Unit,
-    modifier: Modifier = Modifier
+        carParkListUiState: CarParkListUiState,
+        onVacancyClicked: (String) -> Unit,
+        onRetryClicked: () -> Unit,
+        onFindNearest: () -> Unit,
+        modifier: Modifier = Modifier
 ) {
     when (carParkListUiState) {
         is CarParkListUiState.Loading -> LoadingScreen(modifier = modifier.fillMaxSize())
         is CarParkListUiState.Success ->
-            CarParkList(
-                carParks = carParkListUiState.carParks,
-                onVacancyClicked = onVacancyClicked,
-                modifier = modifier
-            )
-
+                CarParkList(
+                        carParks = carParkListUiState.carParks,
+                        onVacancyClicked = onVacancyClicked,
+                        onFindNearest = onFindNearest,
+                        modifier = modifier
+                )
         is CarParkListUiState.Error ->
-            ErrorScreen(onRetryClicked = onRetryClicked, modifier = modifier.fillMaxSize())
+                ErrorScreen(onRetryClicked = onRetryClicked, modifier = modifier.fillMaxSize())
     }
 }
 
 @Composable
 fun LoadingScreen(modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+            modifier = modifier,
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
     ) { Text(text = "Loading car parks...", style = MaterialTheme.typography.headlineMedium) }
 }
 
 @Composable
 fun ErrorScreen(onRetryClicked: () -> Unit, modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+            modifier = modifier,
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Failed to load car parks",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(16.dp)
+                text = "Failed to load car parks",
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.padding(16.dp)
         )
         Button(onClick = onRetryClicked) { Text("Retry") }
     }
@@ -84,26 +95,41 @@ fun ErrorScreen(onRetryClicked: () -> Unit, modifier: Modifier = Modifier) {
 
 @Composable
 fun CarParkList(
-    carParks: List<CarParkBasicInfo>,
-    onVacancyClicked: (String) -> Unit,
-    modifier: Modifier = Modifier
+        carParks: List<CarParkBasicInfo>,
+        onVacancyClicked: (String) -> Unit,
+        onFindNearest: () -> Unit,
+        modifier: Modifier = Modifier
 ) {
-    LazyColumn(modifier = modifier.padding(vertical = 4.dp)) {
-        items(items = carParks, key = { it.parkId }) { carPark ->
-            CarParkCard(carPark = carPark, onVacancyClicked = { onVacancyClicked(carPark.parkId) })
+    Column(modifier = modifier) {
+        Button(
+                onClick = onFindNearest,
+                modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp, vertical = 8.dp),
+                colors =
+                        ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondary
+                        )
+        ) { Text("Find Nearest Car Park", style = MaterialTheme.typography.labelLarge) }
+
+        LazyColumn(modifier = Modifier.padding(vertical = 4.dp)) {
+            items(items = carParks, key = { it.parkId }) { carPark ->
+                CarParkCard(
+                        carPark = carPark,
+                        onVacancyClicked = { onVacancyClicked(carPark.parkId) }
+                )
+            }
         }
     }
 }
 
 @Composable
 fun CarParkCard(
-    carPark: CarParkBasicInfo,
-    onVacancyClicked: () -> Unit,
-    modifier: Modifier = Modifier
+        carPark: CarParkBasicInfo,
+        onVacancyClicked: () -> Unit,
+        modifier: Modifier = Modifier
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
-        modifier = modifier.padding(vertical = 4.dp, horizontal = 8.dp)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
+            modifier = modifier.padding(vertical = 4.dp, horizontal = 8.dp)
     ) { CarParkCardContent(carPark = carPark, onVacancyClicked = onVacancyClicked) }
 }
 
@@ -112,49 +138,45 @@ private fun CarParkCardContent(carPark: CarParkBasicInfo, onVacancyClicked: () -
     var expanded by rememberSaveable { mutableStateOf(false) }
 
     Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-                .animateContentSize(
-                    animationSpec =
-                        spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessLow
-                        )
-                ),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+            modifier =
+                    Modifier.fillMaxWidth()
+                            .padding(12.dp)
+                            .animateContentSize(
+                                    animationSpec =
+                                            spring(
+                                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                    stiffness = Spring.StiffnessLow
+                                            )
+                            ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         val photoUrl = remember(carPark.carparkPhoto) { carPark.carparkPhotoHttps }
 
         AsyncImage(
-            model = photoUrl,
-            contentDescription = "Photo of ${carPark.nameEn}",
-            modifier = Modifier
-                .width(100.dp)
-                .height(75.dp)
-                .clip(RoundedCornerShape(8.dp)),
-            contentScale = ContentScale.Crop,
+                model = photoUrl,
+                contentDescription = "Photo of ${carPark.nameEn}",
+                modifier = Modifier.width(100.dp).height(75.dp).clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop,
         )
 
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                text = carPark.nameEn,
-                style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                maxLines = 2,
-                modifier = Modifier.padding(end = 8.dp)
+                    text = carPark.nameEn,
+                    style =
+                            MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.SemiBold
+                            ),
+                    maxLines = 2,
+                    modifier = Modifier.padding(end = 8.dp)
             )
 
             if (expanded) {
                 Text(text = "ID: ${carPark.parkId}", style = MaterialTheme.typography.bodySmall)
                 Text(
-                    text = carPark.displayAddressEn,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 2
+                        text = carPark.displayAddressEn,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 2
                 )
                 carPark.districtEn?.let {
                     Text(text = "District: $it", style = MaterialTheme.typography.bodySmall)
@@ -169,10 +191,81 @@ private fun CarParkCardContent(carPark: CarParkBasicInfo, onVacancyClicked: () -
         }
 
         Button(
-            onClick = onVacancyClicked,
-            colors =
-                ButtonDefaults.buttonColors(androidx.compose.ui.graphics.Color(0xFF1974C2)),
-            modifier = Modifier.align(Alignment.CenterVertically)
+                onClick = onVacancyClicked,
+                colors =
+                        ButtonDefaults.buttonColors(androidx.compose.ui.graphics.Color(0xFF1974C2)),
+                modifier = Modifier.align(Alignment.CenterVertically)
         ) { Text("Vacancy", style = MaterialTheme.typography.labelMedium) }
+    }
+}
+
+@Composable
+fun FindNearestCarParkScreen(
+        carParkViewModel: CarParkViewModel,
+        onVacancyClicked: (String) -> Unit,
+        onRetryClicked: () -> Unit
+) {
+    val context = LocalContext.current
+    var locationPermissionGranted by remember { mutableStateOf(false) }
+
+    val locationPermissionLauncher =
+            rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.RequestPermission()
+            ) { isGranted: Boolean ->
+                locationPermissionGranted = isGranted
+                if (isGranted) {
+                    findNearestCarPark(context, carParkViewModel, onVacancyClicked)
+                }
+            }
+
+    fun requestLocationAndFindNearest() {
+        when {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+                    PackageManager.PERMISSION_GRANTED -> {
+                findNearestCarPark(context, carParkViewModel, onVacancyClicked)
+            }
+            else -> {
+                locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+        }
+    }
+
+    CarParkListScreen(
+            carParkListUiState = carParkViewModel.carParkListUiState,
+            onVacancyClicked = onVacancyClicked,
+            onRetryClicked = onRetryClicked,
+            onFindNearest = { requestLocationAndFindNearest() }
+    )
+}
+
+private fun findNearestCarPark(
+        context: Context,
+        carParkViewModel: CarParkViewModel,
+        onVacancyClicked: (String) -> Unit
+) {
+    try {
+        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
+        val location: Location? =
+                when {
+                    ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.ACCESS_FINE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED -> {
+                        locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                                ?: locationManager.getLastKnownLocation(
+                                        LocationManager.NETWORK_PROVIDER
+                                )
+                    }
+                    else -> null
+                }
+
+        if (location != null) {
+            val nearestCarPark =
+                    carParkViewModel.findNearestCarPark(location.latitude, location.longitude)
+            nearestCarPark?.let { onVacancyClicked(it.parkId) }
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
     }
 }
